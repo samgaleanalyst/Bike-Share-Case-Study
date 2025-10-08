@@ -1,0 +1,553 @@
+---
+title: "How Does a Bike Share Navigate Speedy Success"
+author: "Sam Gale"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+setwd("~/Bike Project Working Directory")
+options(repos = c(CRAN = "https://cloud.r-project.org"))
+install.packages("tidyverse")
+library(tidyverse)
+library(tibble)
+# Set the path to your CSV file
+csv_path <- "~/Bike Project Working Directory/Divvy_Trips_2019_2020_Combined_Q1_cleaned_V6_for_analysis.csv"
+
+# Import the CSV and assign it to the table name
+bike_trip_complete <- read.csv(csv_path, stringsAsFactors = FALSE)
+
+# View the first few rows to confirm
+head(bike_trip_complete)
+
+
+```
+<br>
+
+## 1) Introduction - Cyclistic
+<br>
+
+In 2016, Cyclistic launched a successful bike-share offering. Since then, the program has grown to a fleet of 5,824 bicycles that are geotracked and locked into a network of 692 stations across Chicago. The bikes can be unlocked from one station and returned to any other station in the system anytime.
+
+Until now, Cyclistic’s marketing strategy relied on building general awareness and appealing to broad consumer segments. One approach that helped make these things possible was the exibility of its pricing plans: single-ride passes, full-day passes, and annual memberships.Customers who purchase single-ride or full-day passes are referred to as casual riders. Customers who purchase annual memberships are Cyclistic members.
+
+Cyclistic’s finance analysts have concluded that annual members are much more protable than casual riders. Although the pricing exibility helps Cyclistic aract more customers,Moreno believes that maximizing the number of annual members will be key to future growth. Rather than creating a marketing campaign that targets all-new customers, Lily Moreno (Director of Marketing) believes there is a solid opportunity to convert casual riders into members. She notes that casual riders are already aware of the Cyclistic program and have chosen Cyclistic for their mobility needs.
+
+Moreno has set a clear goal: Design marketing strategies aimed at converting casual riders into annual members. In order to do that, however, the team needs to beer understand how annual members and casual riders differ, why casual riders would buy a membership, and how digital media could aect their marketing tactics. Moreno and her team are interested in analyzing the Cyclistic historical bike trip data to identify trends.
+<br>
+<hr>
+<br>
+
+## 2) Business Task
+<br>
+
+-   The aim of this analysis is to answer the following question:
+
+**How do annual members and casual riders use Cyclistic bikes differently?**
+
+-   The analysis will break down usage habits of bikes between annual members and casual users. If there are common trends, identify user segments that could convert to annual members. If there are differences, report them.
+
+-   These unbiased insights using automatically generated primary data logs will be used to help the marketing team answer questions.
+
+-    **Key Stakeholder:** Lily Moreno, Marketing Director.
+
+Analysis will focus on identifying trends in the following areas:
+
+-   **Ride Length**: key differences between casual users and members
+
+-   **Usage Patterns:** key differences across each day, days of the week and months.
+
+-   **Ride Characteristics:** Analysing trip lengths to uncover possible usage.
+
+-   **Popular stations:** will help identify where to target campaigns
+<br>
+<hr>
+<br>
+
+## 3) Prepare
+<br>
+
+### Data Location and Organisation
+
+-   The data is provided by automatically generated logs from Motivate International Inc. For this analysis, we are using a primary log of all rides from 2019 Q1 and 2020 Q1. The data is organised in CSV tables with the following headings (2020 format): `ride_id`, `rideable_type`, `started_at`, `ended_at`, `start_station_name`, `start_station_id`, `end_station_name`, `end_station_id`, `usertype`, `start_lat`, `start_lng`, `end_lat`, `end_lng`, `bikeid`, `tripduration`, `gender`, `birthyear`.
+
+-   For 2020, the data headings were updated, so these will be mapped.
+
+-   Given the size of the data, it is manageable in a spreadsheet. The cleaned and consolidated data source is: Divvy_Trips_2019_2020_Combined_Q1_cleaned_V6_for_analysis.csv in the Data section.
+<br>
+<br>
+
+### Strengths & Limitations of Data
+
+-   As all data comes from Q1, seasonal variations will be limited to January 1st -\> March 31st
+
+-   The data is an automatic log and primary generated. It has data from every day during the time period which suggests the data is complete (or the data is sufficient for the study).
+
+-   There are over 791,956 journeys analysed in the data from every day of the specified period so it is comprehensive
+
+-   The data does not contain any subjective or sensitive personal information so does not fall under GDPR laws
+
+-   `bike_id` is absent from the 2020 data so analyzing the type of bikes used will be limited to 2019 Q1 data and cannot be explored without a further database matching `bike_id` to `bike_type`. We have been informed that `rideable_type` is the updated `bike_id`, although it no longer contains a unique identifier.
+<br>
+<br>
+
+### Data Sources
+
+-   The two different data sources from 2019 & 2020 have different headings. Comprehensive matching has been performed to ensure the different headings correspond. The header convention from 2020 has been used.
+
+-   Only 1 dataset has the `bike_id`. We have been informed that `rideable_type` is the updated `bike_id`, although it no longer contains a unique identifier. The columns will be merged as a string.
+
+-   `trip_duration` is only available in the 2019 table so has been deduced in the 2020 table using and `start_time` and `end_time` and validated in the 2019 table with the same process.
+<br>
+<hr>
+<br>
+
+## 4) Process
+<br>
+
+### Data Manipulation
+
+-   `usertype` matched to `member_casual` is defined differently in 2019 & 2020. The 2020 conventions have been used with the following mappings:
+
+    `subscriber` -\> `member`
+
+    `customer` -\> `casual`
+
+-   `ride_id` and `rideable_type` converted to character type as they have different formats from 2019 to 2020.
+
+-   Headings are migrated as follows:
+
+    `trip_id` -\> `ride_id`
+
+    `start_time` -\> `started_at`
+
+    `end_time` -\> `ended_at`
+
+    `from_station_name` -\> `start_station_name`
+
+    `from_station_id` -\> `start_station_id`
+
+    `to_station_name` -\> `end_station_name`
+
+    `to_station_id` -\> `end_station_id`
+
+    `member_casual` -\> `usertype`
+
+    `bike_id`-\> `rideable_type`
+<br>
+<br>
+
+### Data Cleaning
+
+-   Any rows (unique rides) with missing data for the core columns analysed have been deleted (1)
+
+-   Date format & station names have been checked for consistency
+
+-   `start_station_name` & `end_station_name` have been checked for spelling errors. They have not been validated against an independent station list.
+
+-   `ride_length` has been determined (hh:mm:ss) from `started_at` and `ended_at` since the 2020 data did not have `trip_duration`
+
+-   `ride_length(seconds)` has been determined from `ride_length` to standardise analysis
+
+-   `day_of_week` & `day_of_week_name` determined from `started_at`
+
+-   checked for duplicates in `ride_id`. 0 found. 0 removed.
+
+-   Deleted all rows where `ended_at` was logged as before `started_at`. Included in these are rides where Divvy took bikes out of service for QC reasons (210)
+
+-   Deleted all rows where `start_station_name` = "HQ QR". These are test rides.
+
+-   Removed `start_lat`, `start_lng` `end_lat`, `end_lng`, `birthyear`, and `gender` fields as this data was dropped beginning in 2020
+<br>
+<hr>
+<br>
+
+## 5) Analyse & Share
+<br>
+
+### Initial Findings
+
+-   To give clarity through the analysis process, a colour theme has been established:\
+
+    Casual Riders are shown in [<strong>#F8766D</strong>]{style="color:#F8766D;"}.\
+    Members are shown in [<strong>#00BFC4</strong>]{style="color:#00BFC4;"}.
+
+-   Mean `ride_length` = 1189 seconds or 00:19:49
+
+-   Max `ride_length` = 10632022 seconds or 123(days):01:20:22
+
+-   Min `ride_length` = 1 seconds or 00:00:01
+
+-   Median `ride_length`= 539 seconds or 00:08:59
+
+-   Mode `day_of_week_name`= Tuesday
+
+| usertype | Average_ride_length (hh:mm:ss) |
+|----------|--------------------------------|
+| casual   | 01:24:51                       |
+| member   | 00:13:15                       |
+<br>
+<hr>
+
+<br>
+
+
+### 5.1) Average ride length by day
+<br>
+
+```{r echo=TRUE}
+
+
+# Create the data
+ride_length <- tribble(
+  ~usertype, ~Monday, ~Tuesday, ~Wednesday, ~Thursday, ~Friday, ~Saturday, ~Sunday,
+  "casual",     4752,    4562,     4480,       8452,      6091,     4951,      5061,
+  "member",      822,     769,      712,        707,       797,      974,       973
+)
+
+ride_length
+
+# Convert to long format
+ride_length_long <- ride_length %>%
+  pivot_longer(cols = -usertype, names_to = "Day", values_to = "Avg_Ride_Length")
+
+#plot graph
+ggplot(ride_length_long, aes(x = Day, y = Avg_Ride_Length, fill = usertype)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  labs(title = "Average Ride Length by Day",
+       x = "Day of the Week",
+       y = "Average Ride Length (seconds)",
+       fill = "User Type") +
+  theme_minimal() +
+  theme(plot.title = element_text(hjust = 0.5),
+axis.text.x = element_text(angle = 45, hjust = 1))
+
+``` 
+
+<br>
+<br>
+
+**Analysis:** Casual users spend an average of 6.8x longer on rides than members. A hypothesis for this is that casual users ride for leisure and members ride more for utilitarian purposes such as commuting. Marketing strategies should focus the benefits of membership for leisure purposes.
+<br>
+<hr>
+
+<br>
+
+### 5.2) Number of rides by usertype
+<br>
+
+```{r echo=TRUE}
+
+# Create the data
+ride_counts <- tribble(
+  ~usertype, ~Monday, ~Tuesday, ~Wednesday, ~Thursday, ~Friday, ~Saturday, ~Sunday,
+  "casual",     5591,     7311,     7690,       7147,      8013,     13473,     18652,
+  "member",   110430,   127974,   121902,     125228,    115168,     59413,     60197
+)
+
+ride_counts
+
+# Convert to long format
+ride_counts_long <- ride_counts %>%
+  pivot_longer(cols = -usertype, names_to = "Day", values_to = "Num_Rides") %>%
+  mutate(Day = factor(Day, levels = c("Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday")))
+
+ggplot(ride_counts_long, aes(x = Day, y = Num_Rides, fill = usertype)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  scale_y_continuous(labels = scales::comma) +
+    labs(title = "Number of Rides by User Type",
+       x = "Day of the Week",
+       y = "Number of Rides",
+       fill = "User Type") +
+  theme_minimal() +
+  theme(plot.title = element_text(hjust = 0.5),
+axis.text.x = element_text(angle = 45, hjust = 1)) 
+ 
+
+
+```
+<br>
+<br>
+
+**Analysis:** Members take 10.6x as many rides, suggesting more frequent, short rides. A possible hypothesis is a high level of commuting.
+<br>
+<hr>
+<br>
+
+### 5.3) Average count of rides per day (Weekday vs Weekend)
+<br>
+
+```{r echo=TRUE}
+
+# Create the data
+weekend_weekday <- tribble(
+  ~metric, ~Count, 
+  "# Weekday Rides (member)",   600702,    
+  "# Weekend Rides (member)",   119610,
+  "# Weekday Rides (casual)",   35752,    
+  "# Weekend Rides (casual)",   32125, 
+  "Mean # Weekday Rides/Day (member)",  120140.4,    
+  "Mean # Weekend Rides/Day (member)",  59805, 
+  "Mean # Weekday Rides/Day (casual)",  7150.4,    
+  "Mean # Weekend Rides/Day (casual)",  16062.5, 
+)
+
+
+# Parse the metric into components
+plot_data <- weekend_weekday %>%
+  mutate(
+    Type = case_when(
+      str_detect(metric, "member") ~ "Member",
+      str_detect(metric, "casual") ~ "Casual"
+    ),
+    Timing = case_when(
+      str_detect(metric, "Weekday") ~ "Weekday",
+      str_detect(metric, "Weekend") ~ "Weekend"
+    ),
+    Measure = case_when(
+      str_detect(metric, "Mean") ~ "Mean per Day",
+      TRUE ~ "Total"
+    )
+  )
+
+
+# Plot mean rides per day
+ggplot(filter(plot_data, Measure == "Mean per Day"), aes(x = Timing, y = Count, fill = Type)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  labs(title = "Average count of rides per day (Weekday vs Weekend)", y = "# Rides", x = "Day Type") +
+  theme_minimal() +
+  theme(plot.title = element_text(hjust = 0.5))
+
+```
+<br>
+<br>
+
+**Analysis:** The graph shows that during weekdays, members take 16.8x as many rides as casuals. At weekends, members take 3.7x as many rides as casuals. Casual riding increases significantly at the weekends whilst member rides decreases significantly at the weekends
+<br>
+<hr>
+<br>
+
+### 5.4) Casual riders: mean rides per day
+<br>
+
+```{r echo=TRUE}
+
+# Create the data
+casual_means <- tibble(
+  DayType = c("Weekday", "Weekend"),
+  MeanRides = c(7150.4, 16062.5)
+)
+
+# Plot the bar chart
+ggplot(casual_means, aes(x = DayType, y = MeanRides)) +
+  geom_col(width = 0.6, fill = "#F8766D") +
+  labs(
+    title = "Casual Riders: Mean Rides per Day",
+    x = "Day Type",
+    y = "Mean Rides per Day"
+  ) +
+  theme_minimal(base_size = 14) +
+  theme(plot.title = element_text(hjust = 0.5))
+ #scale_fill_manual(values = c("#1f77b4")
+```
+<br>
+<br>
+
+**Analysis**: When we show just the casual data, we can see there are 2.25x as many rides on a weekend day than during the week. So casuals are more than twice as active during the weekends than during the weekdays.
+<br>
+<hr>
+<br>
+
+### 5.5) Members: mean rides per day
+<br>
+
+```{r}
+
+# Create the data
+member_means <- tibble(
+  DayType = c("Weekday", "Weekend"),
+  MeanRides = c(120140.4, 59805)
+)
+
+# Plot the bar chart
+ggplot(member_means, aes(x = DayType, y = MeanRides)) +
+  geom_col(width = 0.6, fill = "#00BFC4") +
+  labs(
+    title = "Member Riders: Mean Rides per Day",
+    x = "Day Type",
+    y = "Mean Rides per Day"
+  ) +
+  theme_minimal(base_size = 14) +
+  theme(plot.title = element_text(hjust = 0.5))
+```
+<br>
+<br>
+
+**Analysis**: The opposite is true for members. There are only 0.5x the number of rides at weekends compared to weekdays.
+<br>
+<hr>
+<br>
+
+### 5.6) Bike usage by month
+<br>
+
+```{r}
+#order months
+month_order <- c("January", "February", "March", "April", "May", "June", 
+                 "July", "August", "September", "October", "November", "December")
+
+bike_trip_complete %>%
+  filter(!is.na(month_of_the_year) & month_of_the_year != "") %>%
+  mutate(month_of_the_year = factor(month_of_the_year, levels = month_order)) %>%
+  group_by(usertype, month_of_the_year) %>%
+  summarise(trip_count = n(), .groups = 'drop') %>%
+  ggplot(aes(x = month_of_the_year, y = trip_count, group = usertype, color = usertype)) +
+  geom_line(linewidth = 1) +
+  geom_point(size = 2) +
+  #scale_y_continuous() +
+  scale_y_continuous(labels = scales::comma) +
+  
+ 
+  labs(title = "Bike Usage by Month", x = "Month", y = "Total Number of Rides") +
+theme_minimal(base_size = 14) +
+  theme(plot.title = element_text(hjust = 0.5))
+
+
+```
+<br>
+<br>
+
+**Analysis**: as the year progresses, the number of rides for both casual and member groups increases. The data for the whole year is not available but I would hypothesise that this trend would continue with a peak in the summer months. With just this data, it is a clear indicator that marketing campaigns should begin in the spring as ride numbers increase.
+
+N.B. It is interesting to note that member rides actually decrease in February before rising again in March. One possible reason for this could be the 'New Years resolution' effect for people committing to cycle commute in January before reverting to other modes of transport in February as their resolve wanes.
+<br>
+<hr>
+<br>
+
+### 5.7) Daily bike usage (by hour): Weekdays vs Weekends
+<br>
+
+```{r}
+library(dplyr)
+library(ggplot2)
+library(lubridate)
+
+#  Parse time strings correctly
+bike_trip_complete <- bike_trip_complete %>%
+  mutate(start_time = hms(start_time))  
+
+# Add derived columns
+bike_trips_processed <- bike_trip_complete %>%
+  mutate(
+    start_hour = hour(start_time),  
+    day_type = if_else(day_of_the_week_name %in% c("Saturday", "Sunday"), "Weekend", "Weekday")
+  ) %>%
+  filter(!is.na(usertype), usertype != "", str_trim(usertype) != "")
+  # Remove rows with NA in usertype
+
+
+# Aggregate trip counts
+trip_summary <- bike_trips_processed %>%
+  count(day_type, usertype, start_hour, name = "trip_count")
+
+# Plot
+ggplot(trip_summary, aes(x = start_hour, y = trip_count, group = usertype, color = usertype)) +
+  geom_line(linewidth = 1, aes(group = usertype)) +
+  geom_point() +
+  facet_wrap(~ day_type) +
+  labs(
+    title = "Daily Bike Usage: Weekdays vs Weekends",
+    y = "Total Number of Rides",
+    x = "Time of Day (24HR)"
+  ) + 
+  theme_minimal(base_size = 14) +
+  theme(plot.title = element_text(hjust = 0.5))
+```
+<br>
+<br>
+
+**Weekday Analysis**: For members on weekdays, there are two clear peaks at 0700-0800 and 1700-1800, suggesting that the majority of members use bikes for commuting. For casual users, there is a gentle rise in activity towards a late afternoon peak, suggesting more casual riding.
+<br>
+
+**Weekend Analysis**: Both members and casuals follow a similar trend with usage curves either side of a lunchtime/early afternoon peak. Converting these casuals to members could be an strategic option.
+<br>
+<hr>
+<br>
+
+### 5.8) Top 10 start stations for casual riders
+<br>
+
+```{r}
+
+csv_path <- "~/Bike Project Working Directory/top_10_casual_start_stations.csv"
+
+# Import the CSV and assign it to the table name
+top_10_casual_start_stations <- read.csv(csv_path, stringsAsFactors = FALSE)
+
+library(ggplot2)
+
+ggplot(top_10_casual_start_stations, aes(x = reorder(start_station_name, casual), y = casual)) +
+  geom_bar(stat = "identity", fill = "#F8766D") +
+  coord_flip() +
+  labs(
+    title = "Top 10 Start Stations for Casual Riders",
+    x = "Station Name",
+    y = "Number of Trips"
+  ) +
+  theme_minimal() +
+  theme(plot.title = element_text(hjust = 0.5))
+
+```
+<br>
+<br>
+
+**Analysis** This chart shows the most popular 10 `start_station_name` for casual users. These could be a good basis to deliver a field marketing campaign. It is worth noting, these stations are all near tourist & leisure attractions, so these users may by on holiday and not prime targets for converting to members.
+<br>
+<hr>
+
+<br>
+
+## 6) Act
+<br>
+<br>
+
+### Summary Findings
+
+The key findings from the analysis are as follows:
+
+-   Casual riders take longer rides on average than members
+
+-   Casual riders take more than double the number of trips at weekends than weekdays.
+
+-   Members ride more frequently, especially on weekdays - suggesting commuting behavior.
+
+-   Member usage shows distinct peaks during commuting hours.
+
+-   Casual riders show leisure hourly usage patterns (afternoon peak) and their most popular start stations are near tourist & leisure hotspots.
+
+-   Members show leisure hourly usage patterns at weekends.
+<br>
+<br>
+
+### Recommendations
+
+1)  **Target casual riders with weekend-only membership offers and leisure-focused campaigns.** A lot of casual riders may not need bikes during the week but use them regularly at weekends for leisure activities. Positioning weekend membership as the key to recreational adventures rather than commuter-centric messaging is key to engage them.
+
+2)  **Highlight convenience for commuting**: faster checkouts, cost savings, and flexibility to engage any casual members who use bikes for commuting.
+
+3)  **Time campaigns & flash offers to coincide with peak casual usage:** late afternoon during weekdays and early afternoon at weekends.
+
+4)  **Tap into the seasonal upswing in March with a timely promotion.** A discounted early-season membership offer can capture fair-weather riders just as enthusiasm blooms: turning occasional rides into habitual use.
+
+5)  **Focus on hotspots with proven casual rider density.** Prioritise *Streeter Dr & Grand Ave*, *Lake Shore Dr & Monroe St*, and the *Shedd Aquarium* for on-site activations, branded signage, and limited-time incentives that convert interest into commitment. I'd also suggest further market research at these stations to see if the riders are local users or city visitors as this will help guide the effectiveness of this strategy.
+<br>
+<br>
+
+### Followup Analysis
+
+-   Find if there is user-identifiable data (user_id) available to discover if some casual users are regularly using the service for commuting. From this, we can deduce the likelihood of there being casual users that would benefit from being full members.
+
+-   Conduct market research at the 10 most popular casual `start_station_name(s)`, to get an understanding of the local vs tourist market.
+
+-   Conduct analysis on a bigger and more recent dataset. Full year data for the last 3 years would be sufficient.
